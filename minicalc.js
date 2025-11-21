@@ -43,18 +43,28 @@ document.addEventListener('DOMContentLoaded', () => {
     const amountInput = document.querySelector('input[name="amount"]');
     const stepValue = amountInput ? parseFloat(amountInput.getAttribute('step')) || 1 : 1;
 
-    // Načíst custom package sizes (např. 0.75, 2.5, 5)
+    // Načíst custom package sizes s jejich pokrytím (např. 0.75L pokryje 10m²)
     const packageSizes = [];
     let pkgIndex = 1;
     while (true) {
         const pkgEl = document.getElementById(`package-${pkgIndex}`);
+        const coverageEl = document.getElementById(`package-${pkgIndex}-coverage`);
         if (!pkgEl) break;
+        
         const size = parseFloat(pkgEl.textContent);
-        if (!isNaN(size)) packageSizes.push(size);
-        pkgEl.classList.add('hidden');
+        const coverage = coverageEl ? parseFloat(coverageEl.textContent) : null;
+        
+        if (!isNaN(size)) {
+            packageSizes.push({ 
+                size, 
+                coverage: coverage || null 
+            });
+            pkgEl.classList.add('hidden');
+            if (coverageEl) coverageEl.classList.add('hidden');
+        }
         pkgIndex++;
     }
-    packageSizes.sort((a, b) => b - a); // Seřadit od největšího k nejmenšímu
+    packageSizes.sort((a, b) => b.size - a.size); // Seřadit od největšího k nejmenšímu
 
     // Načtení samostatného multiplieru (pro případ bez dropdown/ranges)
     let baseMultiplier = 1;
@@ -180,52 +190,106 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Pokud jsou definované package sizes, najít optimální kombinaci
             if (packageSizes.length > 0) {
-                let remaining = result;
-                let total = 0;
-                const packages = [];
+                // Kontrola zda mají všechny balení definované pokrytí
+                const hasCoverage = packageSizes.every(p => p.coverage !== null);
                 
-                // Greedy algoritmus - vzít co nejvíce největších balení
-                for (const size of packageSizes) {
-                    const count = Math.floor(remaining / size);
-                    if (count > 0) {
-                        packages.push({ size, count });
-                        total += size * count;
-                        remaining -= size * count;
-                    }
-                }
-                
-                // Pokud něco zbývá, přidat nejmenší balení které to pokryje
-                if (remaining > 0) {
-                    const smallestThatFits = [...packageSizes].reverse().find(s => s >= remaining);
-                    if (smallestThatFits) {
-                        const existing = packages.find(p => p.size === smallestThatFits);
-                        if (existing) {
-                            existing.count++;
-                        } else {
-                            packages.push({ size: smallestThatFits, count: 1 });
+                if (hasCoverage) {
+                    // Nový režim: balení s pokrytím (např. 5L pokryje 70m²)
+                    let remainingArea = inputValue;
+                    let total = 0;
+                    const packages = [];
+                    
+                    // Greedy algoritmus - použít co nejvíce největších balení podle pokrytí
+                    for (const pkg of packageSizes) {
+                        const count = Math.floor(remainingArea / pkg.coverage);
+                        if (count > 0) {
+                            packages.push({ size: pkg.size, count });
+                            total += pkg.size * count;
+                            remainingArea -= pkg.coverage * count;
                         }
-                        total += smallestThatFits;
-                    } else {
-                        // Pokud ani nejmenší balení nestačí, přidat další nejmenší
-                        const smallest = packageSizes[packageSizes.length - 1];
-                        const existing = packages.find(p => p.size === smallest);
-                        if (existing) {
-                            existing.count++;
-                        } else {
-                            packages.push({ size: smallest, count: 1 });
-                        }
-                        total += smallest;
                     }
+                    
+                    // Pokud zbývá nějaká plocha, přidat nejmenší balení které to pokryje
+                    if (remainingArea > 0) {
+                        const smallestThatCovers = [...packageSizes].reverse().find(p => p.coverage >= remainingArea);
+                        if (smallestThatCovers) {
+                            const existing = packages.find(p => p.size === smallestThatCovers.size);
+                            if (existing) {
+                                existing.count++;
+                            } else {
+                                packages.push({ size: smallestThatCovers.size, count: 1 });
+                            }
+                            total += smallestThatCovers.size;
+                        } else {
+                            // Pokud ani nejmenší balení nestačí, přidat další nejmenší
+                            const smallest = packageSizes[packageSizes.length - 1];
+                            const existing = packages.find(p => p.size === smallest.size);
+                            if (existing) {
+                                existing.count++;
+                            } else {
+                                packages.push({ size: smallest.size, count: 1 });
+                            }
+                            total += smallest.size;
+                        }
+                    }
+                    
+                    // Formátovat výstup
+                    const packageList = packages
+                        .sort((a, b) => b.size - a.size)
+                        .map(p => `${p.count}× ${p.size}${unit}`)
+                        .join(' + ');
+                    
+                    resultDisplay.innerHTML = `<div>Potřebujete celkem: <strong>${total}${unit}</strong></div><div style="margin-top:8px;font-size:14px;color:#666;">${packageList}</div>`;
+                    resultDisplay.style.color = '#28a745';
+                } else {
+                    // Starý režim: balení bez pokrytí (množství se kalkuluje z multiplieru)
+                    let remaining = result;
+                    let total = 0;
+                    const packages = [];
+                    
+                    // Greedy algoritmus - vzít co nejvíce největších balení
+                    for (const pkg of packageSizes) {
+                        const count = Math.floor(remaining / pkg.size);
+                        if (count > 0) {
+                            packages.push({ size: pkg.size, count });
+                            total += pkg.size * count;
+                            remaining -= pkg.size * count;
+                        }
+                    }
+                    
+                    // Pokud něco zbývá, přidat nejmenší balení které to pokryje
+                    if (remaining > 0) {
+                        const smallestThatFits = [...packageSizes].reverse().find(p => p.size >= remaining);
+                        if (smallestThatFits) {
+                            const existing = packages.find(p => p.size === smallestThatFits.size);
+                            if (existing) {
+                                existing.count++;
+                            } else {
+                                packages.push({ size: smallestThatFits.size, count: 1 });
+                            }
+                            total += smallestThatFits.size;
+                        } else {
+                            // Pokud ani nejmenší balení nestačí, přidat další nejmenší
+                            const smallest = packageSizes[packageSizes.length - 1];
+                            const existing = packages.find(p => p.size === smallest.size);
+                            if (existing) {
+                                existing.count++;
+                            } else {
+                                packages.push({ size: smallest.size, count: 1 });
+                            }
+                            total += smallest.size;
+                        }
+                    }
+                    
+                    // Formátovat výstup
+                    const packageList = packages
+                        .sort((a, b) => b.size - a.size)
+                        .map(p => `${p.count}× ${p.size}${unit}`)
+                        .join(' + ');
+                    
+                    resultDisplay.innerHTML = `<div>Potřebujete celkem: <strong>${total}${unit}</strong></div><div style="margin-top:8px;font-size:14px;color:#666;">${packageList}</div>`;
+                    resultDisplay.style.color = '#28a745';
                 }
-                
-                // Formátovat výstup
-                const packageList = packages
-                    .sort((a, b) => b.size - a.size)
-                    .map(p => `${p.count}× ${p.size}${unit}`)
-                    .join(' + ');
-                
-                resultDisplay.innerHTML = `<div>Potřebujete celkem: <strong>${total}${unit}</strong></div><div style="margin-top:8px;font-size:14px;color:#666;">${packageList}</div>`;
-                resultDisplay.style.color = '#28a745';
             } else if (stepValue > 1) {
                 // Zaokrouhlit na nejbližší vyšší násobek step hodnoty
                 result = Math.ceil(result / stepValue) * stepValue;
