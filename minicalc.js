@@ -1,240 +1,177 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Find the short description paragraph to check if we're on the minicalc page
     const headerElement = document.querySelector('.p-short-description p');
-    
-    // Make sure we're on the right page before running the rest of the script
-    if (headerElement && headerElement.className.trim().includes('minicalc')) {
-        // Get the multiplier value from the p element with id "multiplier"
-        const multiplierElement = document.getElementById('multiplier');
-        
-        // Collect dropdown 1 items
-        const dropdown1Items = [];
+    if (!headerElement || !headerElement.className.trim().includes('minicalc')) return;
+
+    const collectItems = (pattern, isHidden = true) => {
+        const items = [];
         let i = 1;
         while (true) {
-            const dropdownItem = document.getElementById(`dropdown-${i}`);
-            if (!dropdownItem) break;
-            dropdown1Items.push({ index: i, text: dropdownItem.textContent.trim() });
-            dropdownItem.classList.add('hidden');
+            const el = document.getElementById(pattern.replace('{n}', i));
+            if (!el) break;
+            items.push({ index: i, text: el.textContent.trim() });
+            if (isHidden) el.classList.add('hidden');
             i++;
         }
-        
-        // Check if we have multiplier element or dropdown items
-        if (!multiplierElement && dropdown1Items.length === 0) {
-            console.error("Couldn't find the multiplier element or dropdown items!");
-            return;
+        return items;
+    };
+
+    const getAndHide = (id, defaultVal = '') => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.classList.add('hidden');
+            return el.innerHTML || el.textContent.trim();
+        }
+        return defaultVal;
+    };
+
+    const dropdown1Items = collectItems('dropdown-{n}');
+    const multiplierElement = document.getElementById('multiplier');
+    
+    if (!multiplierElement && dropdown1Items.length === 0) return;
+
+    const multiplier = multiplierElement ? (parseFloat(multiplierElement.textContent) || 1) : 1;
+    const unit = getAndHide('unit', 'ks');
+    const providedUnit = getAndHide('provided_unit', 'ks');
+    const description = getAndHide('description');
+    const buttonText = getAndHide('button_text', 'Kalkulačka');
+    const buttonColor = getAndHide('button_color', '#007bff');
+    const buttonHoverColor = getAndHide('button_hover_color', '#0056b3');
+    if (multiplierElement) multiplierElement.classList.add('hidden');
+
+    // Preset structures
+    const presets = {
+        '1': [
+            { min: 0, max: 25 },
+            { min: 25.01, max: 50 },
+            { min: 50.01, max: 100 },
+            { min: 100.01, max: 1000 }
+        ],
+        '2': [
+            { min: 0, max: 20 },
+            { min: 20.01, max: 50 },
+            { min: 50.01, max: 100 },
+            { min: 100.01, max: 1000 }
+        ]
+    };
+
+    const rangeMultipliers = {};
+    dropdown1Items.forEach(dropdownItem => {
+        let presetType = null;
+        // Check for preset-{dropdownIndex}-{presetType}
+        for (let pt in presets) {
+            const presetEl = document.getElementById(`preset-${dropdownItem.index}-${pt}`);
+            if (presetEl) {
+                presetType = pt;
+                presetEl.classList.add('hidden');
+                break;
+            }
         }
         
-        const multiplier = multiplierElement ? (parseFloat(multiplierElement.textContent) || 1) : 1;
-        
-        // Get the unit from the p element with id "unit" (result unit)
-        const unitElement = document.getElementById('unit');
-        const unit = unitElement ? unitElement.textContent.trim() : 'ks';
-        
-        // Get the provided unit from the p element with id "provided_unit" (input unit)
-        const providedUnitElement = document.getElementById('provided_unit');
-        const providedUnit = providedUnitElement ? providedUnitElement.textContent.trim() : 'ks';
-        
-        // Get the description from the p element with id "description" (optional)
-        const descriptionElement = document.getElementById('description');
-        const description = descriptionElement ? descriptionElement.innerHTML : '';
-        
-        // Collect dropdown 2 items
-        const dropdown2Items = [];
-        let j = 1;
-        while (true) {
-            const dropdownItem = document.getElementById(`dropdown2-${j}`);
-            if (!dropdownItem) break;
-            dropdown2Items.push({ index: j, text: dropdownItem.textContent.trim() });
-            dropdownItem.classList.add('hidden');
-            j++;
-        }
-        
-        // Collect all multipliers in format multiplier-n-n2
-        const multiplierMap = {};
-        const singleMultiplierMap = {};
-        
-        if (dropdown1Items.length > 0 && dropdown2Items.length > 0) {
-            dropdown1Items.forEach(item1 => {
-                dropdown2Items.forEach(item2 => {
-                    const multElement = document.getElementById(`multiplier-${item1.index}-${item2.index}`);
-                    if (multElement) {
-                        multiplierMap[`${item1.index}-${item2.index}`] = parseFloat(multElement.textContent) || 1;
-                        multElement.classList.add('hidden');
-                    }
-                });
-            });
-        } else if (dropdown1Items.length > 0) {
-            // Single dropdown - collect multiplier-n
-            dropdown1Items.forEach(item => {
-                const multElement = document.getElementById(`multiplier-${item.index}`);
-                if (multElement) {
-                    singleMultiplierMap[item.index] = parseFloat(multElement.textContent) || 1;
-                    multElement.classList.add('hidden');
+        if (presetType) {
+            // Use preset structure with custom multipliers
+            const ranges = [];
+            presets[presetType].forEach((range, idx) => {
+                const multEl = document.getElementById(`multiplier-${dropdownItem.index}-${idx + 1}`);
+                if (multEl) {
+                    ranges.push({
+                        min: range.min,
+                        max: range.max,
+                        multiplier: parseFloat(multEl.textContent) || 1
+                    });
+                    multEl.classList.add('hidden');
                 }
             });
-        }
-        
-        // Hide all the used p elements by adding a hidden class
-        if (multiplierElement) multiplierElement.classList.add('hidden');
-        if (unitElement) unitElement.classList.add('hidden');
-        if (providedUnitElement) providedUnitElement.classList.add('hidden');
-        if (descriptionElement) descriptionElement.classList.add('hidden');
-        
-        // Create a container for the calculator
-        const calcContainer = document.createElement('div');
-        calcContainer.className = 'minicalc-container';
-        calcContainer.style.cssText = 'margin: 20px 0; padding: 20px; background-color: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);';
-        
-        // Create description if available
-        if (description) {
-            const descriptionDiv = document.createElement('div');
-            descriptionDiv.className = 'minicalc-description';
-            descriptionDiv.innerHTML = description;
-            descriptionDiv.style.cssText = 'margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #e0e0e0; color: #666; font-size: 14px; line-height: 1.5;';
-            calcContainer.appendChild(descriptionDiv);
-        }
-        
-        // Create dropdowns container if dropdowns exist
-        if (dropdown1Items.length > 0 || dropdown2Items.length > 0) {
-            const dropdownsContainer = document.createElement('div');
-            dropdownsContainer.style.cssText = 'display: flex; gap: 15px; margin-bottom: 15px; flex-wrap: wrap;';
-            
-            // Create first dropdown if items exist
-            if (dropdown1Items.length > 0) {
-                const dropdown1Group = document.createElement('div');
-                dropdown1Group.style.cssText = 'display: flex; flex-direction: column; gap: 5px;';
-                
-                const dropdown1Label = document.createElement('label');
-                dropdown1Label.textContent = 'Vyberte možnost 1:';
-                dropdown1Label.htmlFor = 'dropdown-1';
-                dropdown1Label.style.cssText = 'font-weight: 600; color: #333; font-size: 14px;';
-                
-                const dropdown1 = document.createElement('select');
-                dropdown1.id = 'dropdown-1';
-                dropdown1.style.cssText = 'padding: 10px 12px; font-size: 15px; border: 1px solid #d0d0d0; border-radius: 4px; font-family: inherit; min-width: 200px;';
-                
-                dropdown1Items.forEach(item => {
-                    const option = document.createElement('option');
-                    option.value = item.index;
-                    option.textContent = item.text;
-                    dropdown1.appendChild(option);
+            if (ranges.length > 0) rangeMultipliers[dropdownItem.index] = ranges;
+        } else {
+            // Check for custom ranges
+            const ranges = [];
+            let rangeIndex = 1;
+            while (true) {
+                const minEl = document.getElementById(`range-${dropdownItem.index}-${rangeIndex}-min`);
+                const maxEl = document.getElementById(`range-${dropdownItem.index}-${rangeIndex}-max`);
+                const multEl = document.getElementById(`multiplier-${dropdownItem.index}-${rangeIndex}`);
+                if (!minEl || !maxEl || !multEl) break;
+                ranges.push({
+                    min: parseFloat(minEl.textContent) || 0,
+                    max: parseFloat(maxEl.textContent) || Infinity,
+                    multiplier: parseFloat(multEl.textContent) || 1
                 });
-                
-                dropdown1Group.appendChild(dropdown1Label);
-                dropdown1Group.appendChild(dropdown1);
-                dropdownsContainer.appendChild(dropdown1Group);
+                [minEl, maxEl, multEl].forEach(el => el.classList.add('hidden'));
+                rangeIndex++;
             }
-            
-            // Create second dropdown if items exist
-            if (dropdown2Items.length > 0) {
-                const dropdown2Group = document.createElement('div');
-                dropdown2Group.style.cssText = 'display: flex; flex-direction: column; gap: 5px;';
-                
-                const dropdown2Label = document.createElement('label');
-                dropdown2Label.textContent = 'Vyberte možnost 2:';
-                dropdown2Label.htmlFor = 'dropdown-2';
-                dropdown2Label.style.cssText = 'font-weight: 600; color: #333; font-size: 14px;';
-                
-                const dropdown2 = document.createElement('select');
-                dropdown2.id = 'dropdown-2';
-                dropdown2.style.cssText = 'padding: 10px 12px; font-size: 15px; border: 1px solid #d0d0d0; border-radius: 4px; font-family: inherit; min-width: 200px;';
-                
-                dropdown2Items.forEach(item => {
-                    const option = document.createElement('option');
-                    option.value = item.index;
-                    option.textContent = item.text;
-                    dropdown2.appendChild(option);
-                });
-                
-                dropdown2Group.appendChild(dropdown2Label);
-                dropdown2Group.appendChild(dropdown2);
-                dropdownsContainer.appendChild(dropdown2Group);
-            }
-            
-            calcContainer.appendChild(dropdownsContainer);
+            if (ranges.length > 0) rangeMultipliers[dropdownItem.index] = ranges;
         }
-        
-        // Create input group container
-        const inputGroup = document.createElement('div');
-        inputGroup.style.cssText = 'display: flex; align-items: center; flex-wrap: wrap; gap: 10px;';
-        
-        // Create label
-        const label = document.createElement('label');
-        label.textContent = 'Množství: ';
-        label.htmlFor = 'calc-input';
-        label.style.cssText = 'font-weight: 600; color: #333; font-size: 15px;';
-        
-        // Create the number input
-        const numberInput = document.createElement('input');
-        numberInput.type = 'number';
-        numberInput.id = 'calc-input';
-        numberInput.placeholder = 'Zadejte hodnotu';
-        numberInput.style.cssText = 'padding: 10px 12px; font-size: 15px; width: 150px; border: 1px solid #d0d0d0; border-radius: 4px; font-family: inherit;';
-        
-        // Create unit label next to input
-        const unitLabel = document.createElement('span');
-        unitLabel.textContent = providedUnit;
-        unitLabel.style.cssText = 'font-size: 15px; color: #666; font-weight: 500;';
-        
-        // Create calculate button
-        const calcButton = document.createElement('button');
-        calcButton.textContent = 'Vypočítat';
-        calcButton.className = 'minicalc-button';
-        calcButton.style.cssText = 'padding: 10px 24px; font-size: 15px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; transition: background-color 0.2s;';
-        
-        // Add hover effect for button
-        calcButton.addEventListener('mouseenter', () => {
-            calcButton.style.backgroundColor = '#218838';
-        });
-        calcButton.addEventListener('mouseleave', () => {
-            calcButton.style.backgroundColor = '#28a745';
-        });
-        
-        // Create result display
-        const resultDisplay = document.createElement('div');
-        resultDisplay.id = 'calc-result';
-        resultDisplay.style.cssText = 'margin-top: 15px; font-size: 18px; font-weight: 600; color: #333;';
-        
-        // Add event listener to calculate on button click
-        calcButton.addEventListener('click', (e) => {
-            e.preventDefault();
-            const inputValue = parseFloat(numberInput.value);
-            
-            if (!isNaN(inputValue)) {
-                let finalMultiplier = multiplier;
-                
-                // If both dropdowns exist, get the multiplier from the map
-                if (dropdown1Items.length > 0 && dropdown2Items.length > 0) {
-                    const dropdown1 = document.getElementById('dropdown-1');
-                    const dropdown2 = document.getElementById('dropdown-2');
-                    const key = `${dropdown1.value}-${dropdown2.value}`;
-                    finalMultiplier = multiplierMap[key] || 1;
-                } else if (dropdown1Items.length > 0) {
-                    // Single dropdown - use multiplier-n
-                    const dropdown1 = document.getElementById('dropdown-1');
-                    finalMultiplier = singleMultiplierMap[dropdown1.value] || multiplier;
-                }
-                
-                const result = inputValue * finalMultiplier;
-                resultDisplay.textContent = `Výsledek: ${result.toFixed(2)} ${unit}`;
-                resultDisplay.style.color = '#28a745';
-            } else {
-                resultDisplay.textContent = 'Prosím zadejte platnou hodnotu';
-                resultDisplay.style.color = '#dc3545';
-            }
-        });
-        
-        // Assemble the input group
-        inputGroup.appendChild(label);
-        inputGroup.appendChild(numberInput);
-        inputGroup.appendChild(unitLabel);
-        inputGroup.appendChild(calcButton);
-        
-        // Assemble the calculator
-        calcContainer.appendChild(inputGroup);
-        calcContainer.appendChild(resultDisplay);
-        
-        // Insert the calculator into the page (after the header element)
-        headerElement.parentNode.insertBefore(calcContainer, headerElement.nextSibling);
+    });
+
+    const el = (tag, props = {}, styles = '') => {
+        const e = document.createElement(tag);
+        Object.entries(props).forEach(([k, v]) => e[k] = v);
+        if (styles) e.style.cssText = styles;
+        return e;
+    };
+
+    const overlay = el('div', {}, 'display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9998;justify-content:center;align-items:center;');
+    const popup = el('div', {}, 'position:relative;background:#fff;max-width:600px;width:90%;max-height:90vh;overflow-y:auto;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,0.3);');
+    const closeBtn = el('button', { textContent: '✕' }, 'position:absolute;top:15px;right:15px;background:none;border:none;font-size:24px;cursor:pointer;color:#666;padding:5px 10px;line-height:1;z-index:1;');
+    closeBtn.onmouseenter = () => closeBtn.style.color = '#000';
+    closeBtn.onmouseleave = () => closeBtn.style.color = '#666';
+
+    const calcContainer = el('div', {}, 'padding:40px 30px 30px;');
+    if (description) calcContainer.appendChild(el('div', { innerHTML: description }, 'margin-bottom:20px;padding-bottom:15px;border-bottom:1px solid #e0e0e0;color:#666;font-size:14px;line-height:1.5;'));
+
+    if (dropdown1Items.length > 0) {
+        const dropdownGroup = el('div', {}, 'display:flex;flex-direction:column;gap:5px;margin-bottom:15px;');
+        const label = el('label', { textContent: 'Vyberte možnost:', htmlFor: 'dropdown-1' }, 'font-weight:600;color:#333;font-size:14px;');
+        const select = el('select', { id: 'dropdown-1' }, 'padding:10px 12px;font-size:15px;border:1px solid #d0d0d0;border-radius:4px;min-width:200px;');
+        dropdown1Items.forEach(item => select.appendChild(el('option', { value: item.index, textContent: item.text })));
+        dropdownGroup.append(label, select);
+        calcContainer.appendChild(dropdownGroup);
     }
+
+    const inputGroup = el('div', {}, 'display:flex;align-items:center;flex-wrap:wrap;gap:10px;');
+    const numberInput = el('input', { type: 'number', id: 'calc-input', placeholder: 'Zadejte hodnotu' }, 'padding:10px 12px;font-size:15px;width:150px;border:1px solid #d0d0d0;border-radius:4px;');
+    const calcButton = el('button', { textContent: 'Vypočítat' }, 'padding:10px 24px;font-size:15px;background-color:#28a745;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;transition:background-color 0.2s;');
+    calcButton.onmouseenter = () => calcButton.style.backgroundColor = '#218838';
+    calcButton.onmouseleave = () => calcButton.style.backgroundColor = '#28a745';
+
+    const resultDisplay = el('div', {}, 'margin-top:15px;font-size:18px;font-weight:600;color:#333;');
+
+    calcButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        const inputValue = parseFloat(numberInput.value);
+        if (!isNaN(inputValue)) {
+            let finalMultiplier = multiplier;
+            if (dropdown1Items.length > 0 && Object.keys(rangeMultipliers).length > 0) {
+                const ranges = rangeMultipliers[document.getElementById('dropdown-1').value];
+                if (ranges) {
+                    const matchingRange = ranges.find(r => inputValue >= r.min && inputValue <= r.max);
+                    if (matchingRange) finalMultiplier = matchingRange.multiplier;
+                }
+            }
+            resultDisplay.textContent = `Výsledek: ${Math.ceil(inputValue * finalMultiplier)} ${unit}`;
+            resultDisplay.style.color = '#28a745';
+        } else {
+            resultDisplay.textContent = 'Prosím zadejte platnou hodnotu';
+            resultDisplay.style.color = '#dc3545';
+        }
+    });
+
+    inputGroup.append(
+        el('label', { textContent: 'Velikost terasy: ', htmlFor: 'calc-input' }, 'font-weight:600;color:#333;font-size:15px;'),
+        numberInput,
+        el('span', { textContent: providedUnit }, 'font-size:15px;color:#666;font-weight:500;'),
+        calcButton
+    );
+    calcContainer.append(inputGroup, resultDisplay);
+    popup.append(closeBtn, calcContainer);
+    overlay.appendChild(popup);
+    document.body.appendChild(overlay);
+
+    const triggerBtn = el('button', { type: 'button', textContent: buttonText }, `padding:12px 30px;font-size:16px;background-color:${buttonColor};color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;transition:background-color 0.2s;margin:10px 0;`);
+    triggerBtn.onmouseenter = () => triggerBtn.style.backgroundColor = buttonHoverColor;
+    triggerBtn.onmouseleave = () => triggerBtn.style.backgroundColor = buttonColor;
+    triggerBtn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); overlay.style.display = 'flex'; });
+    closeBtn.addEventListener('click', () => overlay.style.display = 'none');
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.style.display = 'none'; });
+    headerElement.parentNode.insertBefore(triggerBtn, headerElement.nextSibling);
 });
