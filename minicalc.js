@@ -142,10 +142,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!isNaN(inputValue)) {
             let finalMultiplier = multiplier;
             if (dropdown1Items.length > 0 && Object.keys(rangeMultipliers).length > 0) {
-                const ranges = rangeMultipliers[document.getElementById('dropdown-1').value];
+                const selectedIndex = document.getElementById('dropdown-1').value;
+                const ranges = rangeMultipliers[selectedIndex];
                 if (ranges) {
                     const matchingRange = ranges.find(r => inputValue >= r.min && inputValue <= r.max);
-                    if (matchingRange) finalMultiplier = matchingRange.multiplier;
+                    if (matchingRange) {
+                        finalMultiplier = matchingRange.multiplier;
+                    }
                 }
             }
             resultDisplay.textContent = `Výsledek: ${Math.ceil(inputValue * finalMultiplier)} ${unit}`;
