@@ -30,8 +30,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Zkontrolovat zda existují ranges (bez dropdown)
     const hasRangesOnly = !dropdown1Items.length && !multiplierElement && document.getElementById('range-1-min');
     
-    // Musí existovat alespoň dropdown, ranges nebo samostatný multiplier
-    if (dropdown1Items.length === 0 && !multiplierElement && !hasRangesOnly) return;
+    // Zkontrolovat zda existují package sizes
+    const hasPackages = document.getElementById('package-1');
+    
+    // Musí existovat alespoň dropdown, ranges, samostatný multiplier nebo packages
+    if (dropdown1Items.length === 0 && !multiplierElement && !hasRangesOnly && !hasPackages) return;
 
     const unit = getAndHide('unit', 'ks');
     const providedUnit = getAndHide('provided_unit', 'ks');
