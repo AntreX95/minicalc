@@ -173,7 +173,7 @@ document.addEventListener('DOMContentLoaded', () => {
     overlay.appendChild(popup);
     document.body.appendChild(overlay);
 
-    const triggerBtn = el('button', { textContent: 'Kalkulačka' }, 'padding:12px 30px;font-size:16px;background-color:#007bff;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;transition:background-color 0.2s;margin:10px 0;');
+    const triggerBtn = el('button', { textContent: 'Kalkulačka', type: 'button' }, 'padding:12px 30px;font-size:16px;background-color:#007bff;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;transition:background-color 0.2s;margin:10px 0;');
     triggerBtn.onmouseenter = () => triggerBtn.style.backgroundColor = '#0056b3';
     triggerBtn.onmouseleave = () => triggerBtn.style.backgroundColor = '#007bff';
     triggerBtn.addEventListener('click', () => overlay.style.display = 'flex');
