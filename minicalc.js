@@ -168,7 +168,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 result = Math.ceil(result / stepValue) * stepValue;
             }
             
-            resultDisplay.textContent = `Výsledek: ${result} ${unit}`;
+            resultDisplay.textContent = `Na terasu potřebujete přiližně: ${result} ${unit}`;
             resultDisplay.style.color = '#28a745';
         } else {
             resultDisplay.textContent = 'Prosím zadejte platnou hodnotu';
