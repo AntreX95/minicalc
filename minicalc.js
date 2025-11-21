@@ -33,12 +33,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const unit = getAndHide('unit', 'ks');
     const providedUnit = getAndHide('provided_unit', 'ks');
     const description = getAndHide('description');
-    const buttonText = getAndHide('button_text', 'Kalkulačka');
-    const buttonColor = getAndHide('button_color', '#007bff');
-    const buttonHoverColor = getAndHide('button_hover_color', '#0056b3');
     if (multiplierElement) multiplierElement.classList.add('hidden');
 
-    // Collect custom ranges
     const rangeMultipliers = {};
     dropdown1Items.forEach(dropdownItem => {
         const ranges = [];
@@ -95,24 +91,16 @@ document.addEventListener('DOMContentLoaded', () => {
     calcButton.addEventListener('click', (e) => {
         e.preventDefault();
         const inputValue = parseFloat(numberInput.value);
-        
         if (!isNaN(inputValue)) {
             let finalMultiplier = multiplier;
-            
-            if (dropdown1Items.length > 0) {
-                const selectedIndex = parseInt(document.getElementById('dropdown-1').value);
-                const ranges = rangeMultipliers[selectedIndex];
-                
-                if (ranges && ranges.length > 0) {
+            if (dropdown1Items.length > 0 && Object.keys(rangeMultipliers).length > 0) {
+                const ranges = rangeMultipliers[document.getElementById('dropdown-1').value];
+                if (ranges) {
                     const matchingRange = ranges.find(r => inputValue >= r.min && inputValue <= r.max);
-                    if (matchingRange) {
-                        finalMultiplier = matchingRange.multiplier;
-                    }
+                    if (matchingRange) finalMultiplier = matchingRange.multiplier;
                 }
             }
-            
-            const result = Math.ceil(inputValue * finalMultiplier);
-            resultDisplay.textContent = `Výsledek: ${result} ${unit}`;
+            resultDisplay.textContent = `Výsledek: ${Math.ceil(inputValue * finalMultiplier)} ${unit}`;
             resultDisplay.style.color = '#28a745';
         } else {
             resultDisplay.textContent = 'Prosím zadejte platnou hodnotu';
@@ -131,10 +119,10 @@ document.addEventListener('DOMContentLoaded', () => {
     overlay.appendChild(popup);
     document.body.appendChild(overlay);
 
-    const triggerBtn = el('button', { type: 'button', textContent: buttonText }, `padding:12px 30px;font-size:16px;background-color:${buttonColor};color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;transition:background-color 0.2s;margin:10px 0;`);
-    triggerBtn.onmouseenter = () => triggerBtn.style.backgroundColor = buttonHoverColor;
-    triggerBtn.onmouseleave = () => triggerBtn.style.backgroundColor = buttonColor;
-    triggerBtn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); overlay.style.display = 'flex'; });
+    const triggerBtn = el('button', { textContent: 'Kalkulačka' }, 'padding:12px 30px;font-size:16px;background-color:#007bff;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;transition:background-color 0.2s;margin:10px 0;');
+    triggerBtn.onmouseenter = () => triggerBtn.style.backgroundColor = '#0056b3';
+    triggerBtn.onmouseleave = () => triggerBtn.style.backgroundColor = '#007bff';
+    triggerBtn.addEventListener('click', () => overlay.style.display = 'flex');
     closeBtn.addEventListener('click', () => overlay.style.display = 'none');
     overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.style.display = 'none'; });
     headerElement.parentNode.insertBefore(triggerBtn, headerElement.nextSibling);
