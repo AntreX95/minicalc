@@ -202,20 +202,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     let total = 0;
                     const packages = [];
                     
-                    // Greedy algoritmus - použít co nejvíce největších balení podle pokrytí
-                    for (const pkg of packageSizes) {
-                        const count = Math.floor(remainingArea / pkg.coverage);
-                        if (count > 0) {
-                            packages.push({ size: pkg.size, count });
-                            total += pkg.size * count;
-                            remainingArea -= pkg.coverage * count;
-                        }
-                    }
-                    
-                    // Pokud zbývá nějaká plocha, přidat nejmenší balení které to pokryje
-                    if (remainingArea > 0) {
+                    // Optimalizovaný algoritmus
+                    while (remainingArea > 0) {
+                        // Najít nejmenší balení které pokryje zbývající plochu
                         const smallestThatCovers = [...packageSizes].reverse().find(p => p.coverage >= remainingArea);
+                        
                         if (smallestThatCovers) {
+                            // Pokud existuje balení které pokryje celou zbývající plochu, použij ho
                             const existing = packages.find(p => p.size === smallestThatCovers.size);
                             if (existing) {
                                 existing.count++;
@@ -223,16 +216,18 @@ document.addEventListener('DOMContentLoaded', () => {
                                 packages.push({ size: smallestThatCovers.size, count: 1 });
                             }
                             total += smallestThatCovers.size;
+                            remainingArea = 0;
                         } else {
-                            // Pokud ani nejmenší balení nestačí, přidat další nejmenší
-                            const smallest = packageSizes[packageSizes.length - 1];
-                            const existing = packages.find(p => p.size === smallest.size);
+                            // Pokud žádné balení nepokryje celou plochu, vezmi největší a opakuj
+                            const largest = packageSizes[0];
+                            const existing = packages.find(p => p.size === largest.size);
                             if (existing) {
                                 existing.count++;
                             } else {
-                                packages.push({ size: smallest.size, count: 1 });
+                                packages.push({ size: largest.size, count: 1 });
                             }
-                            total += smallest.size;
+                            total += largest.size;
+                            remainingArea -= largest.coverage;
                         }
                     }
                     
