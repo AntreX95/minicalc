@@ -43,6 +43,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const amountInput = document.querySelector('input[name="amount"]');
     const stepValue = amountInput ? parseFloat(amountInput.getAttribute('step')) || 1 : 1;
 
+    // Načíst custom package sizes (např. 0.75, 2.5, 5)
+    const packageSizes = [];
+    let pkgIndex = 1;
+    while (true) {
+        const pkgEl = document.getElementById(`package-${pkgIndex}`);
+        if (!pkgEl) break;
+        const size = parseFloat(pkgEl.textContent);
+        if (!isNaN(size)) packageSizes.push(size);
+        pkgEl.classList.add('hidden');
+        pkgIndex++;
+    }
+    packageSizes.sort((a, b) => b - a); // Seřadit od největšího k nejmenšímu
+
     // Načtení samostatného multiplieru (pro případ bez dropdown/ranges)
     let baseMultiplier = 1;
     if (multiplierElement) {
@@ -165,13 +178,63 @@ document.addEventListener('DOMContentLoaded', () => {
             // Vypočítat výsledek a zaokrouhlit na step
             let result = Math.ceil(inputValue * finalMultiplier);
             
-            // Zaokrouhlit na nejbližší vyšší násobek step hodnoty
-            if (stepValue > 1) {
+            // Pokud jsou definované package sizes, najít optimální kombinaci
+            if (packageSizes.length > 0) {
+                let remaining = result;
+                let total = 0;
+                const packages = [];
+                
+                // Greedy algoritmus - vzít co nejvíce největších balení
+                for (const size of packageSizes) {
+                    const count = Math.floor(remaining / size);
+                    if (count > 0) {
+                        packages.push({ size, count });
+                        total += size * count;
+                        remaining -= size * count;
+                    }
+                }
+                
+                // Pokud něco zbývá, přidat nejmenší balení které to pokryje
+                if (remaining > 0) {
+                    const smallestThatFits = [...packageSizes].reverse().find(s => s >= remaining);
+                    if (smallestThatFits) {
+                        const existing = packages.find(p => p.size === smallestThatFits);
+                        if (existing) {
+                            existing.count++;
+                        } else {
+                            packages.push({ size: smallestThatFits, count: 1 });
+                        }
+                        total += smallestThatFits;
+                    } else {
+                        // Pokud ani nejmenší balení nestačí, přidat další nejmenší
+                        const smallest = packageSizes[packageSizes.length - 1];
+                        const existing = packages.find(p => p.size === smallest);
+                        if (existing) {
+                            existing.count++;
+                        } else {
+                            packages.push({ size: smallest, count: 1 });
+                        }
+                        total += smallest;
+                    }
+                }
+                
+                // Formátovat výstup
+                const packageList = packages
+                    .sort((a, b) => b.size - a.size)
+                    .map(p => `${p.count}× ${p.size}${unit}`)
+                    .join(' + ');
+                
+                resultDisplay.innerHTML = `<div>Potřebujete celkem: <strong>${total}${unit}</strong></div><div style="margin-top:8px;font-size:14px;color:#666;">${packageList}</div>`;
+                resultDisplay.style.color = '#28a745';
+            } else if (stepValue > 1) {
+                // Zaokrouhlit na nejbližší vyšší násobek step hodnoty
                 result = Math.ceil(result / stepValue) * stepValue;
+                resultDisplay.textContent = `Na terasu potřebujete přiližně: ${result} ${unit}`;
+                resultDisplay.style.color = '#28a745';
+            } else {
+                resultDisplay.textContent = `Na terasu potřebujete přiližně: ${result} ${unit}`;
+                resultDisplay.style.color = '#28a745';
             }
-            
-            resultDisplay.textContent = `Na terasu potřebujete přiližně: ${result} ${unit}`;
-            resultDisplay.style.color = '#28a745';
         } else {
             resultDisplay.textContent = 'Prosím zadejte platnou hodnotu';
             resultDisplay.style.color = '#dc3545';
