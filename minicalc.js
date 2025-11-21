@@ -42,10 +42,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const dropdownLabel = getAndHide('dropdown_label', 'Vyberte možnost:');
     const inputLabel = getAndHide('input_label', 'Velikost terasy: ');
 
-    // Najít amount input a získat step hodnotu
-    const amountInput = document.querySelector('input[name="amount"]');
-    const stepValue = amountInput ? parseFloat(amountInput.getAttribute('step')) || 1 : 1;
-
     // Načíst custom package sizes s jejich pokrytím (např. 0.75L pokryje 10m²)
     const packageSizes = [];
     let pkgIndex = 1;
@@ -188,8 +184,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
             
-            // Vypočítat výsledek a zaokrouhlit na step
-            let result = Math.ceil(inputValue * finalMultiplier);
+            // Vypočítat výsledek
+            let result = inputValue * finalMultiplier;
             
             // Pokud jsou definované package sizes, najít optimální kombinaci
             if (packageSizes.length > 0) {
@@ -198,17 +194,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 if (hasCoverage) {
                     // Nový režim: balení s pokrytím (např. 5L pokryje 70m²)
-                    let remainingArea = inputValue;
+                    // Použít result (již vynásobeno multiplierem) místo inputValue
+                    let remainingLiters = result;
                     let total = 0;
                     const packages = [];
                     
                     // Optimalizovaný algoritmus
-                    while (remainingArea > 0) {
-                        // Najít nejmenší balení které pokryje zbývající plochu
-                        const smallestThatCovers = [...packageSizes].reverse().find(p => p.coverage >= remainingArea);
+                    while (remainingLiters > 0) {
+                        // Najít nejmenší balení které pokryje zbývající množství
+                        const smallestThatCovers = [...packageSizes].reverse().find(p => p.size >= remainingLiters);
                         
                         if (smallestThatCovers) {
-                            // Pokud existuje balení které pokryje celou zbývající plochu, použij ho
+                            // Pokud existuje balení které pokryje celé zbývající množství, použij ho
                             const existing = packages.find(p => p.size === smallestThatCovers.size);
                             if (existing) {
                                 existing.count++;
@@ -216,9 +213,9 @@ document.addEventListener('DOMContentLoaded', () => {
                                 packages.push({ size: smallestThatCovers.size, count: 1 });
                             }
                             total += smallestThatCovers.size;
-                            remainingArea = 0;
+                            remainingLiters = 0;
                         } else {
-                            // Pokud žádné balení nepokryje celou plochu, vezmi největší a opakuj
+                            // Pokud žádné balení nestačí, vezmi největší a opakuj
                             const largest = packageSizes[0];
                             const existing = packages.find(p => p.size === largest.size);
                             if (existing) {
@@ -227,7 +224,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 packages.push({ size: largest.size, count: 1 });
                             }
                             total += largest.size;
-                            remainingArea -= largest.coverage;
+                            remainingLiters -= largest.size;
                         }
                     }
                     
@@ -237,7 +234,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         .map(p => `${p.count}× ${p.size}${unit}`)
                         .join(' + ');
                     
-                    resultDisplay.innerHTML = `<div>Potřebujete celkem: <strong>${total}${unit}</strong></div><div style="margin-top:8px;font-size:14px;color:#666;">${packageList}</div>`;
+                    resultDisplay.innerHTML = `<div>Na nátěr potřebujete: <strong>${result.toFixed(2)}${unit}</strong></div><div style="margin-top:8px;font-size:14px;color:#666;"><strong>Doporučená balení:</strong> ${packageList} = ${total}${unit}</div>`;
                     resultDisplay.style.color = '#28a745';
                 } else {
                     // Starý režim: balení bez pokrytí (množství se kalkuluje z multiplieru)
@@ -285,16 +282,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         .map(p => `${p.count}× ${p.size}${unit}`)
                         .join(' + ');
                     
-                    resultDisplay.innerHTML = `<div>Potřebujete celkem: <strong>${total}${unit}</strong></div><div style="margin-top:8px;font-size:14px;color:#666;">${packageList}</div>`;
+                    resultDisplay.innerHTML = `<div>Potřebujete celkem: <strong>${total}${unit}</strong></div><div style="margin-top:8px;font-size:14px;color:#666;"><strong>Doporučená balení:</strong><br>${packageList}</div>`;
                     resultDisplay.style.color = '#28a745';
                 }
-            } else if (stepValue > 1) {
-                // Zaokrouhlit na nejbližší vyšší násobek step hodnoty
-                result = Math.ceil(result / stepValue) * stepValue;
-                resultDisplay.textContent = `Na terasu potřebujete přiližně: ${result} ${unit}`;
-                resultDisplay.style.color = '#28a745';
             } else {
-                resultDisplay.textContent = `Na terasu potřebujete přiližně: ${result} ${unit}`;
+                // Pro produkty bez packages zaokrouhlit nahoru
+                result = Math.ceil(result);
+                resultDisplay.textContent = `Výsledek: ${result} ${unit}`;
                 resultDisplay.style.color = '#28a745';
             }
         } else {
