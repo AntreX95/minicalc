@@ -27,8 +27,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const dropdown1Items = collectItems('dropdown-{n}');
     const multiplierElement = document.getElementById('multiplier');
     
+    // Zkontrolovat zda existují ranges (bez dropdown)
+    const hasRangesOnly = !dropdown1Items.length && !multiplierElement && document.getElementById('range-1-min');
+    
     // Musí existovat alespoň dropdown, ranges nebo samostatný multiplier
-    if (dropdown1Items.length === 0 && !multiplierElement) return;
+    if (dropdown1Items.length === 0 && !multiplierElement && !hasRangesOnly) return;
 
     const unit = getAndHide('unit', 'ks');
     const providedUnit = getAndHide('provided_unit', 'ks');
