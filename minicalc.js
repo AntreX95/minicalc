@@ -49,7 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
         multiplierElement.classList.add('hidden');
     }
 
-    // Načtení dropdown multiplierů (bez ranges)
+    // Načtení dropdown multiplierů
     const dropdownMultipliers = {};
     dropdown1Items.forEach(dropdownItem => {
         const multEl = document.getElementById(`multiplier-${dropdownItem.index}`);
