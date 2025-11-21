@@ -36,6 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const unit = getAndHide('unit', 'ks');
     const providedUnit = getAndHide('provided_unit', 'ks');
     const description = getAndHide('description');
+    const dropdownLabel = getAndHide('dropdown_label', 'Vyberte možnost:');
 
     // Najít amount input a získat step hodnotu
     const amountInput = document.querySelector('input[name="amount"]');
@@ -117,7 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (dropdown1Items.length > 0) {
         const dropdownGroup = el('div', {}, 'display:flex;flex-direction:column;gap:5px;margin-bottom:15px;');
-        const label = el('label', { textContent: 'Vyberte možnost:', htmlFor: 'dropdown-select' }, 'font-weight:600;color:#333;font-size:14px;');
+        const label = el('label', { textContent: dropdownLabel, htmlFor: 'dropdown-select' }, 'font-weight:600;color:#333;font-size:14px;');
         const select = el('select', { id: 'dropdown-select' }, 'padding:10px 12px;font-size:15px;border:1px solid #d0d0d0;border-radius:4px;min-width:200px;');
         dropdown1Items.forEach(item => select.appendChild(el('option', { value: item.index, textContent: item.text })));
         dropdownGroup.append(label, select);
