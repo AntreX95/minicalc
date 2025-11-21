@@ -38,74 +38,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const buttonHoverColor = getAndHide('button_hover_color', '#0056b3');
     if (multiplierElement) multiplierElement.classList.add('hidden');
 
-    // Preset structures
-    const presets = {
-        '1': [
-            { min: 0, max: 25 },
-            { min: 25.01, max: 50 },
-            { min: 50.01, max: 100 },
-            { min: 100.01, max: 1000 }
-        ],
-        '2': [
-            { min: 0, max: 20 },
-            { min: 20.01, max: 50 },
-            { min: 50.01, max: 100 },
-            { min: 100.01, max: 1000 }
-        ]
-    };
-
+    // Collect custom ranges
     const rangeMultipliers = {};
     dropdown1Items.forEach(dropdownItem => {
-        let presetType = null;
-        // Check for preset-{dropdownIndex}-{presetType}
-        for (let pt in presets) {
-            const presetEl = document.getElementById(`preset-${dropdownItem.index}-${pt}`);
-            if (presetEl) {
-                presetType = pt;
-                presetEl.classList.add('hidden');
-                break;
-            }
-        }
-        
-        if (presetType) {
-            // Use preset structure with custom multipliers
-            const ranges = [];
-            presets[presetType].forEach((range, idx) => {
-                const multEl = document.getElementById(`multiplier-${dropdownItem.index}-${idx + 1}`);
-                if (multEl) {
-                    ranges.push({
-                        min: range.min,
-                        max: range.max,
-                        multiplier: parseFloat(multEl.textContent) || 1
-                    });
-                    multEl.classList.add('hidden');
-                }
+        const ranges = [];
+        let rangeIndex = 1;
+        while (true) {
+            const minEl = document.getElementById(`range-${dropdownItem.index}-${rangeIndex}-min`);
+            const maxEl = document.getElementById(`range-${dropdownItem.index}-${rangeIndex}-max`);
+            const multEl = document.getElementById(`multiplier-${dropdownItem.index}-${rangeIndex}`);
+            if (!minEl || !maxEl || !multEl) break;
+            ranges.push({
+                min: parseFloat(minEl.textContent) || 0,
+                max: parseFloat(maxEl.textContent) || Infinity,
+                multiplier: parseFloat(multEl.textContent) || 1
             });
-            if (ranges.length > 0) rangeMultipliers[dropdownItem.index] = ranges;
-        } else {
-            // Check for custom ranges
-            const ranges = [];
-            let rangeIndex = 1;
-            while (true) {
-                const minEl = document.getElementById(`range-${dropdownItem.index}-${rangeIndex}-min`);
-                const maxEl = document.getElementById(`range-${dropdownItem.index}-${rangeIndex}-max`);
-                const multEl = document.getElementById(`multiplier-${dropdownItem.index}-${rangeIndex}`);
-                if (!minEl || !maxEl || !multEl) break;
-                ranges.push({
-                    min: parseFloat(minEl.textContent) || 0,
-                    max: parseFloat(maxEl.textContent) || Infinity,
-                    multiplier: parseFloat(multEl.textContent) || 1
-                });
-                [minEl, maxEl, multEl].forEach(el => el.classList.add('hidden'));
-                rangeIndex++;
-            }
-            if (ranges.length > 0) rangeMultipliers[dropdownItem.index] = ranges;
+            [minEl, maxEl, multEl].forEach(el => el.classList.add('hidden'));
+            rangeIndex++;
         }
+        if (ranges.length > 0) rangeMultipliers[dropdownItem.index] = ranges;
     });
-    
-    // Debug - zkontrolujte v console
-    console.log('Range Multipliers:', rangeMultipliers);
-    console.log('Dropdown Items:', dropdown1Items);
 
     const el = (tag, props = {}, styles = '') => {
         const e = document.createElement(tag);
@@ -148,21 +100,17 @@ document.addEventListener('DOMContentLoaded', () => {
             let finalMultiplier = multiplier;
             
             if (dropdown1Items.length > 0) {
-                const selectedIndex = document.getElementById('dropdown-1').value;
-                console.log('Selected Index:', selectedIndex);
+                const selectedIndex = parseInt(document.getElementById('dropdown-1').value);
                 const ranges = rangeMultipliers[selectedIndex];
-                console.log('Ranges for selected:', ranges);
                 
                 if (ranges && ranges.length > 0) {
                     const matchingRange = ranges.find(r => inputValue >= r.min && inputValue <= r.max);
-                    console.log('Matching Range:', matchingRange);
                     if (matchingRange) {
                         finalMultiplier = matchingRange.multiplier;
                     }
                 }
             }
             
-            console.log('Final Multiplier:', finalMultiplier);
             const result = Math.ceil(inputValue * finalMultiplier);
             resultDisplay.textContent = `Výsledek: ${result} ${unit}`;
             resultDisplay.style.color = '#28a745';
