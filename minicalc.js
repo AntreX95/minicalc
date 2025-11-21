@@ -102,6 +102,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (ranges.length > 0) rangeMultipliers[dropdownItem.index] = ranges;
         }
     });
+    
+    // Debug - zkontrolujte v console
+    console.log('Range Multipliers:', rangeMultipliers);
+    console.log('Dropdown Items:', dropdown1Items);
 
     const el = (tag, props = {}, styles = '') => {
         const e = document.createElement(tag);
@@ -139,19 +143,28 @@ document.addEventListener('DOMContentLoaded', () => {
     calcButton.addEventListener('click', (e) => {
         e.preventDefault();
         const inputValue = parseFloat(numberInput.value);
+        
         if (!isNaN(inputValue)) {
             let finalMultiplier = multiplier;
-            if (dropdown1Items.length > 0 && Object.keys(rangeMultipliers).length > 0) {
+            
+            if (dropdown1Items.length > 0) {
                 const selectedIndex = document.getElementById('dropdown-1').value;
+                console.log('Selected Index:', selectedIndex);
                 const ranges = rangeMultipliers[selectedIndex];
-                if (ranges) {
+                console.log('Ranges for selected:', ranges);
+                
+                if (ranges && ranges.length > 0) {
                     const matchingRange = ranges.find(r => inputValue >= r.min && inputValue <= r.max);
+                    console.log('Matching Range:', matchingRange);
                     if (matchingRange) {
                         finalMultiplier = matchingRange.multiplier;
                     }
                 }
             }
-            resultDisplay.textContent = `Výsledek: ${Math.ceil(inputValue * finalMultiplier)} ${unit}`;
+            
+            console.log('Final Multiplier:', finalMultiplier);
+            const result = Math.ceil(inputValue * finalMultiplier);
+            resultDisplay.textContent = `Výsledek: ${result} ${unit}`;
             resultDisplay.style.color = '#28a745';
         } else {
             resultDisplay.textContent = 'Prosím zadejte platnou hodnotu';
