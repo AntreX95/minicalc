@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const headerElement = document.querySelector('.p-short-description p');
-    if (!headerElement || !headerElement.className.trim().includes('minicalc')) return;
+    const headerElement = document.querySelector('p.minicalc');
+    if (!headerElement) return;
 
     const collectItems = (pattern, isHidden = true) => {
         const items = [];
