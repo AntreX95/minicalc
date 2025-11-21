@@ -37,6 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const providedUnit = getAndHide('provided_unit', 'ks');
     const description = getAndHide('description');
     const dropdownLabel = getAndHide('dropdown_label', 'Vyberte možnost:');
+    const inputLabel = getAndHide('input_label', 'Velikost terasy: ');
 
     // Najít amount input a získat step hodnotu
     const amountInput = document.querySelector('input[name="amount"]');
@@ -49,7 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
         multiplierElement.classList.add('hidden');
     }
 
-    // Načtení dropdown multiplierů
+    // Načtení dropdown multiplierů (bez ranges)
     const dropdownMultipliers = {};
     dropdown1Items.forEach(dropdownItem => {
         const multEl = document.getElementById(`multiplier-${dropdownItem.index}`);
@@ -178,7 +179,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     inputGroup.append(
-        el('label', { textContent: 'Velikost terasy: ', htmlFor: 'calc-input' }, 'font-weight:600;color:#333;font-size:15px;'),
+        el('label', { textContent: inputLabel, htmlFor: 'calc-input' }, 'font-weight:600;color:#333;font-size:15px;'),
         numberInput,
         el('span', { textContent: providedUnit }, 'font-size:15px;color:#666;font-weight:500;'),
         calcButton
