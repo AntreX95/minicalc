@@ -27,22 +27,59 @@ document.addEventListener('DOMContentLoaded', () => {
     const dropdown1Items = collectItems('dropdown-{n}');
     const multiplierElement = document.getElementById('multiplier');
     
-    if (!multiplierElement && dropdown1Items.length === 0) return;
+    // Musí existovat alespoň dropdown, ranges nebo samostatný multiplier
+    if (dropdown1Items.length === 0 && !multiplierElement) return;
 
-    const multiplier = multiplierElement ? (parseFloat(multiplierElement.textContent) || 1) : 1;
     const unit = getAndHide('unit', 'ks');
     const providedUnit = getAndHide('provided_unit', 'ks');
     const description = getAndHide('description');
-    if (multiplierElement) multiplierElement.classList.add('hidden');
 
-    const rangeMultipliers = {};
+    // Načtení samostatného multiplieru (pro případ bez dropdown/ranges)
+    let baseMultiplier = 1;
+    if (multiplierElement) {
+        baseMultiplier = parseFloat(multiplierElement.textContent) || 1;
+        multiplierElement.classList.add('hidden');
+    }
+
+    // Načtení dropdown multiplierů (bez ranges)
+    const dropdownMultipliers = {};
     dropdown1Items.forEach(dropdownItem => {
+        const multEl = document.getElementById(`multiplier-${dropdownItem.index}`);
+        if (multEl) {
+            dropdownMultipliers[dropdownItem.index] = parseFloat(multEl.textContent) || 1;
+            multEl.classList.add('hidden');
+        }
+    });
+
+    // Načtení range multiplierů (s nebo bez dropdown)
+    const rangeMultipliers = {};
+    if (dropdown1Items.length > 0) {
+        dropdown1Items.forEach(dropdownItem => {
+            const ranges = [];
+            let rangeIndex = 1;
+            while (true) {
+                const minEl = document.getElementById(`range-${dropdownItem.index}-${rangeIndex}-min`);
+                const maxEl = document.getElementById(`range-${dropdownItem.index}-${rangeIndex}-max`);
+                const multEl = document.getElementById(`multiplier-${dropdownItem.index}-${rangeIndex}`);
+                if (!minEl || !maxEl || !multEl) break;
+                ranges.push({
+                    min: parseFloat(minEl.textContent) || 0,
+                    max: parseFloat(maxEl.textContent) || Infinity,
+                    multiplier: parseFloat(multEl.textContent) || 1
+                });
+                [minEl, maxEl, multEl].forEach(el => el.classList.add('hidden'));
+                rangeIndex++;
+            }
+            if (ranges.length > 0) rangeMultipliers[dropdownItem.index] = ranges;
+        });
+    } else {
+        // Ranges bez dropdown (range-1-min, range-1-max, multiplier-1)
         const ranges = [];
         let rangeIndex = 1;
         while (true) {
-            const minEl = document.getElementById(`range-${dropdownItem.index}-${rangeIndex}-min`);
-            const maxEl = document.getElementById(`range-${dropdownItem.index}-${rangeIndex}-max`);
-            const multEl = document.getElementById(`multiplier-${dropdownItem.index}-${rangeIndex}`);
+            const minEl = document.getElementById(`range-${rangeIndex}-min`);
+            const maxEl = document.getElementById(`range-${rangeIndex}-max`);
+            const multEl = document.getElementById(`multiplier-${rangeIndex}`);
             if (!minEl || !maxEl || !multEl) break;
             ranges.push({
                 min: parseFloat(minEl.textContent) || 0,
@@ -52,8 +89,8 @@ document.addEventListener('DOMContentLoaded', () => {
             [minEl, maxEl, multEl].forEach(el => el.classList.add('hidden'));
             rangeIndex++;
         }
-        if (ranges.length > 0) rangeMultipliers[dropdownItem.index] = ranges;
-    });
+        if (ranges.length > 0) rangeMultipliers[0] = ranges;
+    }
 
     const el = (tag, props = {}, styles = '') => {
         const e = document.createElement(tag);
@@ -73,8 +110,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (dropdown1Items.length > 0) {
         const dropdownGroup = el('div', {}, 'display:flex;flex-direction:column;gap:5px;margin-bottom:15px;');
-        const label = el('label', { textContent: 'Vyberte možnost:', htmlFor: 'dropdown-1' }, 'font-weight:600;color:#333;font-size:14px;');
-        const select = el('select', { id: 'dropdown-1' }, 'padding:10px 12px;font-size:15px;border:1px solid #d0d0d0;border-radius:4px;min-width:200px;');
+        const label = el('label', { textContent: 'Vyberte možnost:', htmlFor: 'dropdown-select' }, 'font-weight:600;color:#333;font-size:14px;');
+        const select = el('select', { id: 'dropdown-select' }, 'padding:10px 12px;font-size:15px;border:1px solid #d0d0d0;border-radius:4px;min-width:200px;');
         dropdown1Items.forEach(item => select.appendChild(el('option', { value: item.index, textContent: item.text })));
         dropdownGroup.append(label, select);
         calcContainer.appendChild(dropdownGroup);
@@ -92,15 +129,32 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         const inputValue = parseFloat(numberInput.value);
         if (!isNaN(inputValue)) {
-            let finalMultiplier = multiplier;
-            if (dropdown1Items.length > 0 && Object.keys(rangeMultipliers).length > 0) {
-                const ranges = rangeMultipliers[document.getElementById('dropdown-1').value];
+            let finalMultiplier = baseMultiplier;
+            
+            if (dropdown1Items.length > 0) {
+                const selectedDropdown = parseInt(document.getElementById('dropdown-select').value);
+                
+                // Zkusit najít range multiplier
+                const ranges = rangeMultipliers[selectedDropdown];
                 if (ranges) {
                     const matchingRange = ranges.find(r => inputValue >= r.min && inputValue <= r.max);
-                    if (matchingRange) finalMultiplier = matchingRange.multiplier;
+                    if (matchingRange) {
+                        finalMultiplier = matchingRange.multiplier;
+                    }
+                } else if (dropdownMultipliers[selectedDropdown]) {
+                    // Použít dropdown multiplier (bez ranges)
+                    finalMultiplier = dropdownMultipliers[selectedDropdown];
+                }
+            } else if (rangeMultipliers[0]) {
+                // Ranges bez dropdown
+                const matchingRange = rangeMultipliers[0].find(r => inputValue >= r.min && inputValue <= r.max);
+                if (matchingRange) {
+                    finalMultiplier = matchingRange.multiplier;
                 }
             }
-            resultDisplay.textContent = `Výsledek: ${Math.ceil(inputValue * finalMultiplier)} ${unit}`;
+            
+            const result = Math.ceil(inputValue * finalMultiplier);
+            resultDisplay.textContent = `Výsledek: ${result} ${unit}`;
             resultDisplay.style.color = '#28a745';
         } else {
             resultDisplay.textContent = 'Prosím zadejte platnou hodnotu';
