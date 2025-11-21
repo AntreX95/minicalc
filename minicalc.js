@@ -37,6 +37,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const providedUnit = getAndHide('provided_unit', 'ks');
     const description = getAndHide('description');
 
+    // Najít amount input a získat step hodnotu
+    const amountInput = document.querySelector('input[name="amount"]');
+    const stepValue = amountInput ? parseFloat(amountInput.getAttribute('step')) || 1 : 1;
+
     // Načtení samostatného multiplieru (pro případ bez dropdown/ranges)
     let baseMultiplier = 1;
     if (multiplierElement) {
@@ -156,7 +160,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
             
-            const result = Math.ceil(inputValue * finalMultiplier);
+            // Vypočítat výsledek a zaokrouhlit na step
+            let result = Math.ceil(inputValue * finalMultiplier);
+            
+            // Zaokrouhlit na nejbližší vyšší násobek step hodnoty
+            if (stepValue > 1) {
+                result = Math.ceil(result / stepValue) * stepValue;
+            }
+            
             resultDisplay.textContent = `Výsledek: ${result} ${unit}`;
             resultDisplay.style.color = '#28a745';
         } else {
