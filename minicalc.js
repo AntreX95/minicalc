@@ -42,6 +42,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const dropdownLabel = getAndHide('dropdown_label', 'Vyberte možnost:');
     const inputLabel = getAndHide('input_label', 'Velikost terasy: ');
 
+    // Najít amount input a získat step hodnotu
+    const amountInput = document.querySelector('input[name="amount"]');
+    const stepValue = amountInput ? parseFloat(amountInput.getAttribute('step')) || 1 : 1;
+
     // Načíst custom package sizes s jejich pokrytím (např. 0.75L pokryje 10m²)
     const packageSizes = [];
     let pkgIndex = 1;
@@ -288,6 +292,12 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 // Pro produkty bez packages zaokrouhlit nahoru
                 result = Math.ceil(result);
+                
+                // Zaokrouhlit na nejbližší vyšší násobek step hodnoty
+                if (stepValue > 1) {
+                    result = Math.ceil(result / stepValue) * stepValue;
+                }
+                
                 resultDisplay.textContent = `Výsledek: ${result} ${unit}`;
                 resultDisplay.style.color = '#28a745';
             }
